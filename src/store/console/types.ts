@@ -1,10 +1,46 @@
+// src/store/console/types.ts
+import type {
+  PromptDialog,
+  PromptDialogItem,
+  PromptDialogItemText,
+  PromptDialogItemMarkup,
+  PromptDialogItemImage,
+  PromptDialogItemButton,
+  PromptDialogItemRow,
+  PromptDialogItemButtonGroup,
+  PromptDialogInlineItem,
+  PromptDialogFooterButton,
+  PromptLifecycle,
+  PromptStyle,
+  PromptSize,
+  PromptStateMachine,
+  MarkupNode
+} from '@/util/prompt-protocol/types'
+
+export type {
+  PromptDialog,
+  PromptDialogItem,
+  PromptDialogItemText,
+  PromptDialogItemMarkup,
+  PromptDialogItemImage,
+  PromptDialogItemButton,
+  PromptDialogItemRow,
+  PromptDialogItemButtonGroup,
+  PromptDialogInlineItem,
+  PromptDialogFooterButton,
+  PromptLifecycle,
+  PromptStyle,
+  PromptSize,
+  PromptStateMachine,
+  MarkupNode
+}
+
 export interface ConsoleState {
-  // [key: string]: string;
   consoleCommand: string;
   consoleSearch: string;
-  console: ConsoleEntry[]; // console stream
-  gcodeHelp: Moonraker.KlippyApis.GcodeHelpResponse; // known commands
-  consoleEntryCount: number; // give each console entry a unique id.
+  console: ConsoleEntry[];
+  gcodeHelp: Moonraker.KlippyApis.GcodeHelpResponse;
+  consoleEntryCount: number;
   commandHistory: string[];
   autoScroll: boolean;
   lastCleared: number;
@@ -28,28 +64,4 @@ export interface ConsoleFilter {
   type: ConsoleFilterType;
   value: string;
   enabled: boolean;
-}
-
-export interface PromptDialog {
-  open: boolean;
-  title?: string;
-  items: PromptDialogItem[];
-  footerButtons: PromptDialogButton[]
-}
-
-export type PromptDialogItem = PromptDialogItemText | PromptDialogItemButton
-
-export interface PromptDialogItemText {
-  type: 'text';
-  text: string;
-}
-
-export interface PromptDialogItemButton extends PromptDialogButton {
-  type: 'button';
-}
-
-export interface PromptDialogButton {
-  text: string;
-  command?: string;
-  color?: string;
 }
