@@ -18,6 +18,17 @@ export const actions = {
   },
 
   /**
+   * Close any active prompt without wiping the rest of the console state.
+   * Dispatched on Klippy disconnect (which the spec requires close prompts on,
+   * but where wiping command history would be hostile UX).
+   */
+  async clearPromptOnDisconnect ({ state, commit }) {
+    if (state.promptDialog.machine.lifecycle === 'idle') return
+    const cleared = reducePrompt(state.promptDialog, { kind: 'disconnect' }, REDUCER_OPTS)
+    commit('setPromptDialog', cleared)
+  },
+
+  /**
    * Inits known command history
    */
   async initConsole ({ commit }, payload) {

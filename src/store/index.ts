@@ -94,7 +94,10 @@ export const storeOptions = {
         dispatch('reset', [
           'printer',
           'wait'
-        ])
+        ]),
+        // Spec rule: close active prompts on Klipper disconnect (alongside Moonraker).
+        // Bypasses the broader console reset so command history etc. survive.
+        dispatch('console/clearPromptOnDisconnect')
       ])
     },
 
