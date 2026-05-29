@@ -22,7 +22,7 @@ export type ProtocolEvent =
   | { kind: 'unknown'; command: string }
 
 const SIZE_NORMAL: PromptSize = 'normal'
-const VALID_SIZES: ReadonlySet<PromptSize> = new Set(['small', 'normal', 'large', 'x-large'])
+const VALID_SIZES: ReadonlySet<PromptSize> = new Set<PromptSize>(['small', 'normal', 'large', 'x-large'])
 
 function normalizeSize (raw: string | undefined): PromptSize {
   if (typeof raw !== 'string') return SIZE_NORMAL

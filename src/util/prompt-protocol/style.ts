@@ -1,6 +1,6 @@
 import type { PromptStyle } from './types'
 
-const KNOWN_STYLES: ReadonlySet<PromptStyle> = new Set([
+const KNOWN_STYLES: ReadonlySet<PromptStyle> = new Set<PromptStyle>([
   'primary', 'secondary', 'info', 'warning', 'error', 'success'
 ])
 
