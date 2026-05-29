@@ -1,0 +1,10 @@
+// src/util/prompt-protocol/index.ts
+export { parseAction } from './parse-action'
+export type { ProtocolEvent } from './parse-action'
+export { reducePrompt, initialPromptState } from './reducer'
+export type { ReducerOptions } from './reducer'
+export { isValidImagePath, parseImageScale } from './image-path'
+export { parseMarkup, toPlainText as promptMarkupToPlainText } from './markup'
+export { normalizeStyle, isPromptStyle } from './style'
+export { parseButtonFields } from './button'
+export type * from './types'
