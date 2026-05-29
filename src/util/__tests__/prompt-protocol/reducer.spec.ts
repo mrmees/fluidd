@@ -162,3 +162,146 @@ describe('reducer — shown state', () => {
     expect(state).toEqual(initial)
   })
 })
+
+describe('reducer — rows', () => {
+  function building (): PromptDialog {
+    return reducePrompt(initialPromptState(), { kind: 'begin', title: 'T' }, OPTS)
+  }
+
+  it('opens a row container', () => {
+    const state = feed(building(), { kind: 'row_start' })
+    expect(state.machine.activeContainer).toBe('row')
+    expect(state.items).toEqual([])
+  })
+
+  it('routes content into the open row', () => {
+    const state = feed(building(),
+      { kind: 'row_start' },
+      { kind: 'text', text: 'a' },
+      { kind: 'text', text: 'b' }
+    )
+    expect(state.items).toHaveLength(1)
+    expect(state.items[0].type).toBe('row')
+    if (state.items[0].type === 'row') {
+      expect(state.items[0].items).toEqual([
+        { id: 1, type: 'text', text: 'a' },
+        { id: 2, type: 'text', text: 'b' }
+      ])
+    }
+  })
+
+  it('closes the row on row_end', () => {
+    const state = feed(building(),
+      { kind: 'row_start' },
+      { kind: 'text', text: 'in' },
+      { kind: 'row_end' },
+      { kind: 'text', text: 'out' }
+    )
+    expect(state.machine.activeContainer).toBeNull()
+    expect(state.items).toHaveLength(2)
+    expect(state.items[1]).toEqual({ id: 2, type: 'text', text: 'out' })
+  })
+
+  it('ignores nested row_start', () => {
+    const state = feed(building(),
+      { kind: 'row_start' },
+      { kind: 'row_start' },  // ignored
+      { kind: 'text', text: 'x' }
+    )
+    expect(state.machine.activeContainer).toBe('row')
+    expect(state.items[0].type).toBe('row')
+    if (state.items[0].type === 'row') {
+      expect(state.items[0].items).toEqual([{ id: 2, type: 'text', text: 'x' }])
+    }
+  })
+
+  it('routes footer_button to footerButtons even inside a row', () => {
+    const state = feed(building(),
+      { kind: 'row_start' },
+      { kind: 'footer_button', label: 'Cancel', gcode: '_CANCEL', style: 'secondary' }
+    )
+    expect(state.footerButtons).toHaveLength(1)
+    if (state.items[0]?.type === 'row') {
+      expect(state.items[0].items).toEqual([])
+    }
+  })
+
+  it('end while row open implicitly closes container', () => {
+    const state = feed(building(),
+      { kind: 'row_start' },
+      { kind: 'text', text: 'x' },
+      { kind: 'end' }
+    )
+    expect(state.machine.activeContainer).toBeNull()
+  })
+})
+
+describe('reducer — button groups', () => {
+  function building (): PromptDialog {
+    return reducePrompt(initialPromptState(), { kind: 'begin', title: 'T' }, OPTS)
+  }
+
+  it('opens a button group container', () => {
+    const state = feed(building(), { kind: 'button_group_start' })
+    expect(state.machine.activeContainer).toBe('button_group')
+  })
+
+  it('routes buttons into the open group', () => {
+    const state = feed(building(),
+      { kind: 'button_group_start' },
+      { kind: 'button', label: '+1', gcode: '_PLUS1', style: 'secondary' },
+      { kind: 'button', label: '-1', gcode: '_MINUS1', style: 'secondary' }
+    )
+    expect(state.items).toHaveLength(1)
+    if (state.items[0].type === 'button_group') {
+      expect(state.items[0].buttons).toEqual([
+        { id: 1, type: 'button', label: '+1', gcode: '_PLUS1', style: 'secondary' },
+        { id: 2, type: 'button', label: '-1', gcode: '_MINUS1', style: 'secondary' }
+      ])
+    }
+  })
+
+  it('drops non-button content inside button group (spec: groups contain buttons only)', () => {
+    const state = feed(building(),
+      { kind: 'button_group_start' },
+      { kind: 'text', text: 'oops' },
+      { kind: 'button', label: 'OK', gcode: 'OK', style: 'primary' }
+    )
+    if (state.items[0].type === 'button_group') {
+      expect(state.items[0].buttons).toEqual([
+        { id: 1, type: 'button', label: 'OK', gcode: 'OK', style: 'primary' }
+      ])
+    }
+  })
+
+  it('ignores nested button_group_start', () => {
+    const state = feed(building(),
+      { kind: 'button_group_start' },
+      { kind: 'button_group_start' },
+      { kind: 'button', label: 'OK', gcode: 'OK', style: 'primary' }
+    )
+    expect(state.machine.activeContainer).toBe('button_group')
+  })
+
+  it('ignores row_start inside button_group (and vice versa)', () => {
+    const state = feed(building(),
+      { kind: 'button_group_start' },
+      { kind: 'row_start' },
+      { kind: 'button', label: 'OK', gcode: 'OK', style: 'primary' }
+    )
+    expect(state.machine.activeContainer).toBe('button_group')
+    if (state.items[0].type === 'button_group') {
+      expect(state.items[0].buttons).toHaveLength(1)
+    }
+  })
+
+  it('closes on button_group_end', () => {
+    const state = feed(building(),
+      { kind: 'button_group_start' },
+      { kind: 'button_group_end' },
+      { kind: 'text', text: 'after' }
+    )
+    expect(state.machine.activeContainer).toBeNull()
+    expect(state.items).toHaveLength(2)
+  })
+})

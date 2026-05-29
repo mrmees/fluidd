@@ -8,6 +8,7 @@
 import type {
   PromptDialog,
   PromptDialogFooterButton,
+  PromptDialogInlineItem,
   PromptDialogItem,
   PromptDialogItemButton,
   PromptDialogItemImage,
@@ -84,13 +85,113 @@ function beginPrompt (
   }
 }
 
-function appendItem (state: PromptDialog, item: Omit<PromptDialogItem, 'id'>): PromptDialog {
+function ensureContainerInItems (state: PromptDialog): PromptDialog {
+  const pending = state.machine.pendingContainer
+  if (!pending) return state
+  // Already flushed to items if the last item's id matches the pending container's id.
+  const last = state.items[state.items.length - 1]
+  if (last && last.id === pending.id) return state
+  // First child — flush the container shell into items.
+  return { ...state, items: [...state.items, pending] }
+}
+
+function appendInRow (state: PromptDialog, item: Omit<PromptDialogInlineItem, 'id'>): PromptDialog {
+  const flushed = ensureContainerInItems(state)
+  const id = flushed.machine.nextItemId
+  const newItem = { ...item, id } as PromptDialogInlineItem
+  const items = flushed.items.map((existing, idx) => {
+    if (idx !== flushed.items.length - 1) return existing
+    if (existing.type !== 'row') return existing
+    return { ...existing, items: [...existing.items, newItem] }
+  })
+  const updatedContainer = items[items.length - 1]
+  return {
+    ...flushed,
+    items,
+    machine: {
+      ...flushed.machine,
+      nextItemId: id + 1,
+      pendingContainer: updatedContainer
+    }
+  }
+}
+
+function appendInGroup (state: PromptDialog, button: Omit<PromptDialogItemButton, 'id'>): PromptDialog {
+  const flushed = ensureContainerInItems(state)
+  const id = flushed.machine.nextItemId
+  const items = flushed.items.map((existing, idx) => {
+    if (idx !== flushed.items.length - 1) return existing
+    if (existing.type !== 'button_group') return existing
+    return { ...existing, buttons: [...existing.buttons, { ...button, id }] }
+  })
+  const updatedContainer = items[items.length - 1]
+  return {
+    ...flushed,
+    items,
+    machine: {
+      ...flushed.machine,
+      nextItemId: id + 1,
+      pendingContainer: updatedContainer
+    }
+  }
+}
+
+function appendTopLevel (state: PromptDialog, item: Omit<PromptDialogItem, 'id'>): PromptDialog {
   const id = state.machine.nextItemId
-  const withId = { ...item, id } as PromptDialogItem
   return {
     ...state,
-    items: [...state.items, withId],
+    items: [...state.items, { ...item, id } as PromptDialogItem],
     machine: { ...state.machine, nextItemId: id + 1 }
+  }
+}
+
+function appendContent (state: PromptDialog, item: Omit<PromptDialogItem, 'id'>): PromptDialog {
+  const container = state.machine.activeContainer
+  if (container === 'row') {
+    // Spec: rows can contain inline items only (text, markup, image, button).
+    if (item.type === 'row' || item.type === 'button_group') return state
+    return appendInRow(state, item as Omit<PromptDialogInlineItem, 'id'>)
+  }
+  if (container === 'button_group') {
+    // Spec: groups contain content buttons only.
+    if (item.type !== 'button') return state
+    return appendInGroup(state, item as Omit<PromptDialogItemButton, 'id'>)
+  }
+  return appendTopLevel(state, item)
+}
+
+function openContainer (state: PromptDialog, kind: 'row' | 'button_group'): PromptDialog {
+  // Nested start: advance id (tombstone for ID stability) but otherwise ignore.
+  if (state.machine.activeContainer !== null) {
+    return { ...state, machine: { ...state.machine, nextItemId: state.machine.nextItemId + 1 } }
+  }
+  const id = state.machine.nextItemId
+  const pendingContainer: PromptDialogItem = kind === 'row'
+    ? { id, type: 'row', items: [] }
+    : { id, type: 'button_group', buttons: [] }
+  return {
+    ...state,
+    machine: {
+      ...state.machine,
+      activeContainer: kind,
+      nextItemId: id + 1,
+      pendingContainer
+    }
+  }
+}
+
+function closeContainer (state: PromptDialog, kind: 'row' | 'button_group'): PromptDialog {
+  if (state.machine.activeContainer !== kind) return state
+  // Flush pending container to items (handles empty-container case).
+  const pending = state.machine.pendingContainer
+  const last = state.items[state.items.length - 1]
+  const alreadyFlushed = pending && last && last.id === pending.id
+  const newItems = (!alreadyFlushed && pending) ? [...state.items, pending] : state.items
+  const { pendingContainer: _dropped, ...machineRest } = state.machine
+  return {
+    ...state,
+    items: newItems,
+    machine: { ...machineRest, activeContainer: null }
   }
 }
 
@@ -111,54 +212,44 @@ export function reducePrompt (
   event: ProtocolEvent,
   opts: ReducerOptions
 ): PromptDialog {
-  // Targeting / sizing / disconnect handled in Task 13.
   switch (event.kind) {
     case 'begin':
       return beginPrompt(state, event.title, opts)
-
     case 'unknown':
       return state
-
     case 'show':
       if (state.machine.lifecycle === 'building') {
         return { ...state, open: true, machine: { ...state.machine, lifecycle: 'shown' } }
       }
       return state
-
     case 'end':
       if (state.machine.lifecycle === 'idle') return state
       return freshIdle({ nextItemId: state.machine.nextItemId })
   }
 
-  // Content commands below — only valid in building or shown states.
   const lc = state.machine.lifecycle
   if (lc === 'idle' || lc === 'suppressed') return state
 
   switch (event.kind) {
     case 'text':
-      return appendItem(state, { type: 'text', text: event.text } as Omit<PromptDialogItemText, 'id'>)
-
+      return appendContent(state, { type: 'text', text: event.text } as Omit<PromptDialogItemText, 'id'>)
     case 'markup':
-      return appendItem(state, { type: 'markup', ast: event.ast } as Omit<PromptDialogItemMarkup, 'id'>)
-
-    case 'image': {
-      const item: Omit<PromptDialogItemImage, 'id'> = {
-        type: 'image', path: event.path, alt: event.alt, scale: event.scale
-      }
-      return appendItem(state, item)
-    }
-
+      return appendContent(state, { type: 'markup', ast: event.ast } as Omit<PromptDialogItemMarkup, 'id'>)
+    case 'image':
+      return appendContent(state, { type: 'image', path: event.path, alt: event.alt, scale: event.scale } as Omit<PromptDialogItemImage, 'id'>)
     case 'button':
-      return appendItem(state, {
-        type: 'button', label: event.label, gcode: event.gcode, style: event.style
-      } as Omit<PromptDialogItemButton, 'id'>)
-
+      return appendContent(state, { type: 'button', label: event.label, gcode: event.gcode, style: event.style } as Omit<PromptDialogItemButton, 'id'>)
     case 'footer_button':
-      return appendFooterButton(state, {
-        label: event.label, gcode: event.gcode, style: event.style
-      })
+      return appendFooterButton(state, { label: event.label, gcode: event.gcode, style: event.style })
+    case 'row_start':
+      return openContainer(state, 'row')
+    case 'row_end':
+      return closeContainer(state, 'row')
+    case 'button_group_start':
+      return openContainer(state, 'button_group')
+    case 'button_group_end':
+      return closeContainer(state, 'button_group')
   }
 
-  // row/group/target/size/disconnect handled in Tasks 12 and 13.
   return state
 }

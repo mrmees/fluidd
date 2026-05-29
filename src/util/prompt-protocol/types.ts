@@ -30,6 +30,8 @@ export interface PromptDialog {
 export interface PromptStateMachine {
   lifecycle: PromptLifecycle
   activeContainer: 'row' | 'button_group' | null
+  /** Partially-built container held until its matching _end event. */
+  pendingContainer?: PromptDialogItem
   activeTargets: string[]
   pendingTargets: string[] | null
   pendingSize: PromptSize | null
