@@ -3,8 +3,8 @@
     v-model="open"
     :scrollable="scrollable"
     :persistent="persistent"
-    :fullscreen="isMobileViewport"
-    :transition="isMobileViewport ? 'dialog-bottom-transition' : undefined"
+    :fullscreen="fullscreen || isMobileViewport"
+    :transition="(fullscreen || isMobileViewport) ? 'dialog-bottom-transition' : undefined"
     v-bind="$attrs"
     v-on="$listeners"
   >
@@ -47,7 +47,7 @@
             </v-col>
 
             <v-col
-              v-if="!persistent"
+              v-if="!persistent || closableX"
               cols="auto"
               align-self="center"
             >
@@ -164,6 +164,15 @@ export default class AppDialog extends Mixins(BrowserMixin) {
 
   @Prop({ type: Boolean })
   readonly titleShadow?: boolean
+
+  @Prop({ type: Boolean })
+  readonly fullscreen?: boolean
+
+  // Show the X close button even when persistent. Used by ActionCommandPromptDialog —
+  // persistent prevents Esc/backdrop cascade closures from other dialogs, but the user
+  // still needs an explicit dismiss path.
+  @Prop({ type: Boolean })
+  readonly closableX?: boolean
 
   @PropSync('valid', { type: Boolean })
   validModel?: boolean

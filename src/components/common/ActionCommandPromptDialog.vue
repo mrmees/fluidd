@@ -3,7 +3,10 @@
     v-model="open"
     :title="dialog.title"
     :max-width="maxWidth"
+    :fullscreen="isFullscreen"
     :no-actions="dialog.footerButtons.length === 0"
+    persistent
+    closable-x
   >
     <v-card-text>
       <component
@@ -39,7 +42,8 @@ import PromptItemRow from './prompt/PromptItemRow.vue'
 import PromptButtonGroup from './prompt/PromptButtonGroup.vue'
 import PromptFooterButton from './prompt/PromptFooterButton.vue'
 
-const SIZE_MAP: Record<PromptSize, number> = {
+// 'full-screen' is handled via the dialog's :fullscreen prop, not a max-width.
+const SIZE_MAP: Record<Exclude<PromptSize, 'full-screen'>, number> = {
   small: 400,
   normal: 600,
   large: 800,
@@ -83,8 +87,12 @@ export default class ActionCommandPromptDialog extends Mixins(StateMixin) {
     }
   }
 
-  get maxWidth (): number {
-    return SIZE_MAP[this.dialog.size]
+  get isFullscreen (): boolean {
+    return this.dialog.size === 'full-screen'
+  }
+
+  get maxWidth (): number | undefined {
+    return this.isFullscreen ? undefined : SIZE_MAP[this.dialog.size as Exclude<PromptSize, 'full-screen'>]
   }
 
   handleGcode (gcode: string) {

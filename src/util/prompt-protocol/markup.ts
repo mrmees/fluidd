@@ -1,5 +1,5 @@
 // src/util/prompt-protocol/markup.ts
-import type { MarkupNode, PromptSize } from './types'
+import type { MarkupNode, PromptTextSize } from './types'
 
 const ENTITY_MAP: Record<string, string> = {
   '&lt;': '<',
@@ -41,7 +41,7 @@ function decodeEscapes (input: string): string {
 
 const SIMPLE_TAGS = new Set(['b', 'i', 'u'])
 const VALUE_TAGS = new Set(['color', 'bgcolor', 'size'])
-const VALID_SIZES: ReadonlySet<PromptSize> = new Set<PromptSize>(['small', 'normal', 'large', 'x-large'])
+const VALID_SIZES: ReadonlySet<PromptTextSize> = new Set<PromptTextSize>(['small', 'normal', 'large', 'x-large'])
 const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i
 
 // A tag name is a sequence of lowercase letters (and optionally digits/hyphens).
@@ -149,7 +149,7 @@ function buildAst (input: string): MarkupNode[] {
         if (open.tag === 'color' || open.tag === 'bgcolor') {
           node = { type: 'tag', tag: open.tag, value, children: open.children }
         } else if (open.tag === 'size') {
-          node = { type: 'tag', tag: 'size', value: value as PromptSize, children: open.children }
+          node = { type: 'tag', tag: 'size', value: value as PromptTextSize, children: open.children }
         }
       }
       // Invalid value or unknown value-tag: fall through — children inlined below

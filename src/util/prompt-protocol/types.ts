@@ -14,7 +14,13 @@ export type PromptStyle =
   | 'error'
   | 'success'
 
-export type PromptSize = 'small' | 'normal' | 'large' | 'x-large'
+// Text size used inside PromptMarkup `<size:...>` tags.
+// Does NOT include 'full-screen' — that only makes sense as a dialog envelope.
+export type PromptTextSize = 'small' | 'normal' | 'large' | 'x-large'
+
+// Dialog envelope size used by `prompt_size`. Superset of PromptTextSize
+// with 'full-screen' added — fills the viewport like Vuetify's fullscreen prop.
+export type PromptSize = PromptTextSize | 'full-screen'
 
 export interface PromptDialog {
   // Renderer-facing
@@ -111,4 +117,4 @@ export interface MarkupTextNode {
 export type MarkupTagNode =
   | { type: 'tag'; tag: 'b' | 'i' | 'u'; children: MarkupNode[] }
   | { type: 'tag'; tag: 'color' | 'bgcolor'; value: string; children: MarkupNode[] }
-  | { type: 'tag'; tag: 'size'; value: PromptSize; children: MarkupNode[] }
+  | { type: 'tag'; tag: 'size'; value: PromptTextSize; children: MarkupNode[] }
