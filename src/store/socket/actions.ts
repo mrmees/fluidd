@@ -180,16 +180,8 @@ export const actions = {
 
         break
 
-      case 'ready': {
-        const wasReady = state.hasBeenReady
-        commit('setHasBeenReady', true)
-        if (wasReady) {
-          // Reconnect (not initial load): close any prompt the gcode_store
-          // replay may have re-opened, per spec §9.6.
-          await dispatch('console/clearPromptOnReconnect', undefined, { root: true })
-        }
+      case 'ready':
         break
-      }
     }
   },
 

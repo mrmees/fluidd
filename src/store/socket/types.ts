@@ -2,7 +2,6 @@ export interface SocketState {
   status: SocketStatus;
   acceptingNotifications: boolean;
   connectionId: number | null;
-  hasBeenReady: boolean;
 }
 
 export type SocketStatus =

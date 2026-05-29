@@ -13,7 +13,8 @@ export const defaultState = (): ConsoleState => {
     lastCleared: 0,
     promptDialog: initialPromptState(),
     consoleFilters: [],
-    consoleFiltersRegexp: []
+    consoleFiltersRegexp: [],
+    hasReplayedGcodeStore: false
   }
 }
 

@@ -51,6 +51,10 @@ export const mutations = {
     state.promptDialog = payload
   },
 
+  setHasReplayedGcodeStore (state, payload: boolean) {
+    state.hasReplayedGcodeStore = payload
+  },
+
   /**
    * Defines the list of available commands
    */

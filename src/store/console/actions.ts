@@ -71,7 +71,7 @@ export const actions = {
   /**
    * On a fresh load of the UI, we load prior gcode / console history
    */
-  async onGcodeStore ({ commit }, payload: Moonraker.DataStore.GcodeStoreResponse) {
+  async onGcodeStore ({ commit, state }, payload: Moonraker.DataStore.GcodeStoreResponse) {
     if (payload && payload.gcode_store) {
       const entries = payload.gcode_store.map((entry, index): ConsoleEntry => {
         const rawMessage = Globals.CONSOLE_RECEIVE_PREFIX + entry.message
@@ -94,6 +94,14 @@ export const actions = {
         if (event) promptState = reducePrompt(promptState, event, REDUCER_OPTS)
       }
       commit('setPromptDialog', promptState)
+
+      // On reconnect (not the first replay), the replay may have re-opened a
+      // prompt that should have closed on disconnect per spec §9.6. Clear it.
+      if (state.hasReplayedGcodeStore && promptState.machine.lifecycle !== 'idle') {
+        const cleared = reducePrompt(promptState, { kind: 'disconnect' }, REDUCER_OPTS)
+        commit('setPromptDialog', cleared)
+      }
+      commit('setHasReplayedGcodeStore', true)
     }
   },
 
@@ -101,16 +109,6 @@ export const actions = {
     const event = parseAction(payload.rawMessage)
     if (!event) return
     const next = reducePrompt(state.promptDialog, event, REDUCER_OPTS)
-    commit('setPromptDialog', next)
-  },
-
-  /**
-   * Called after reconnect to discard any prompt that gcode_store replay
-   * re-opened. Spec §9.6: prompts must close on disconnect.
-   */
-  async clearPromptOnReconnect ({ state, commit }) {
-    if (state.promptDialog.machine.lifecycle === 'idle') return
-    const next = reducePrompt(state.promptDialog, { kind: 'disconnect' }, REDUCER_OPTS)
     commit('setPromptDialog', next)
   },
 

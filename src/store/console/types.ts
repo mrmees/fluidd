@@ -47,6 +47,7 @@ export interface ConsoleState {
   promptDialog: PromptDialog;
   consoleFilters: ConsoleFilter[];
   consoleFiltersRegexp: RegExp[];
+  hasReplayedGcodeStore: boolean;
 }
 
 export interface ConsoleEntry {
