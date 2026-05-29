@@ -25,7 +25,7 @@ export default class PromptItemImage extends Vue {
   loadFailed = false
 
   get imageUrl (): string {
-    const apiUrl = this.$typedState.config.apiUrl
+    const apiUrl = (this.$store.state as any).config.apiUrl as string
     // Path is already validated by the reducer; encode segments to preserve / structure.
     const encoded = this.item.path.split('/').map(encodeURIComponent).join('/')
     return `${apiUrl}/server/files/${encoded}`

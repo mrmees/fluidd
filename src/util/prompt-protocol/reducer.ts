@@ -192,7 +192,7 @@ function closeContainer (state: PromptDialog, kind: 'row' | 'button_group'): Pro
   return {
     ...state,
     items: newItems,
-    machine: { ...state.machine, pendingContainer: null, activeContainer: null }
+    machine: { ...state.machine, pendingContainer: undefined, activeContainer: null }
   }
 }
 

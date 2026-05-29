@@ -39,7 +39,7 @@ export interface ConsoleState {
   consoleCommand: string;
   consoleSearch: string;
   console: ConsoleEntry[];
-  gcodeHelp: Moonraker.KlippyApis.GcodeHelpResponse;
+  gcodeHelp: Record<string, string>;
   consoleEntryCount: number;
   commandHistory: string[];
   autoScroll: boolean;
