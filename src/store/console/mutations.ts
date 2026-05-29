@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid'
 import type { MutationTree } from 'vuex'
 import { defaultState } from './state'
 import { Globals } from '@/globals'
-import type { ConsoleEntry, ConsoleFilter, ConsoleState, PromptDialogItemButton, PromptDialogItem } from './types'
+import type { ConsoleEntry, ConsoleFilter, ConsoleState, PromptDialog } from './types'
 import { escapeRegExp } from 'lodash-es'
 
 const compileExpression = (filter: ConsoleFilter): RegExp => {
@@ -47,27 +47,8 @@ export const mutations = {
     state.console = payload
   },
 
-  setResetPromptDialog (state, payload: string) {
-    const { promptDialog } = defaultState()
-
-    Object.assign(state, {
-      promptDialog: {
-        ...promptDialog,
-        title: payload
-      }
-    })
-  },
-
-  setPromptDialogItem (state, payload: PromptDialogItem) {
-    state.promptDialog.items.push(payload)
-  },
-
-  setPromptDialogFooterButton (state, payload: PromptDialogItemButton) {
-    state.promptDialog.footerButtons.push(payload)
-  },
-
-  setPromptDialogOpen (state, payload: boolean) {
-    state.promptDialog.open = payload
+  setPromptDialog (state, payload: PromptDialog) {
+    state.promptDialog = payload
   },
 
   /**
