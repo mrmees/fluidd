@@ -1,5 +1,5 @@
 // src/util/__tests__/prompt-protocol/parse-action.spec.ts
-import { parseAction, type ProtocolEvent } from '@/util/prompt-protocol/parse-action'
+import { parseAction } from '@/util/prompt-protocol/parse-action'
 
 describe('parseAction — non-prompt lines', () => {
   it('returns null for empty input', () => {

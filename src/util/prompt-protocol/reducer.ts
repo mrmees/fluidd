@@ -189,11 +189,10 @@ function closeContainer (state: PromptDialog, kind: 'row' | 'button_group'): Pro
   const last = state.items[state.items.length - 1]
   const alreadyFlushed = pending && last && last.id === pending.id
   const newItems = (!alreadyFlushed && pending) ? [...state.items, pending] : state.items
-  const { pendingContainer: _dropped, ...machineRest } = state.machine
   return {
     ...state,
     items: newItems,
-    machine: { ...machineRest, activeContainer: null }
+    machine: { ...state.machine, pendingContainer: null, activeContainer: null }
   }
 }
 

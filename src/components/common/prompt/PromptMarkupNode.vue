@@ -1,5 +1,8 @@
 <template>
-  <span :class="nodeClass" :style="nodeStyle">
+  <span
+    :class="nodeClass"
+    :style="nodeStyle"
+  >
     <template v-if="node.type === 'text'">{{ node.text }}</template>
     <prompt-markup-node
       v-for="(child, i) in tagChildren"

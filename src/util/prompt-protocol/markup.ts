@@ -42,7 +42,7 @@ function decodeEscapes (input: string): string {
 const SIMPLE_TAGS = new Set(['b', 'i', 'u'])
 const VALUE_TAGS = new Set(['color', 'bgcolor', 'size'])
 const VALID_SIZES: ReadonlySet<PromptSize> = new Set<PromptSize>(['small', 'normal', 'large', 'x-large'])
-const HEX_COLOR_RE = /^#[0-9a-fA-F]{6}$/
+const HEX_COLOR_RE = /^#[0-9a-f]{6}$/i
 
 // A tag name is a sequence of lowercase letters (and optionally digits/hyphens).
 // Case-sensitive per spec: uppercase tag names do NOT match.

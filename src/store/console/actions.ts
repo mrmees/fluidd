@@ -79,7 +79,9 @@ export const actions = {
         const type = (
           entry.type === 'response' &&
           entry.message.startsWith('// action:')
-        ) ? 'action' : entry.type
+        )
+          ? 'action'
+          : entry.type
         return { ...entry, id: index, message, type }
       })
 
