@@ -27,6 +27,8 @@ export default class PromptButtonGroup extends Vue {
   margin: 4px 0;
 }
 .prompt-button-group .v-btn {
+  flex: 1 1 0;
+  min-width: 0;
   border-radius: 0;
 }
 .prompt-button-group .v-btn:first-child {

@@ -37,6 +37,16 @@ export default class PromptItemRow extends Vue {
 </script>
 
 <style scoped>
-.prompt-item-row { gap: 8px; margin: 4px 0; }
-.prompt-item-row > * { margin: 0; }
+.prompt-item-row {
+  gap: 8px;
+  margin: 4px 0;
+}
+.prompt-item-row > * {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  min-width: 0;
+}
 </style>
