@@ -17,6 +17,7 @@ import type {
   PromptStateMachine
 } from './types'
 import type { ProtocolEvent } from './parse-action'
+import { isValidImagePath } from './image-path'
 
 export interface ReducerOptions {
   frontendId: string
@@ -213,6 +214,13 @@ export function reducePrompt (
   opts: ReducerOptions
 ): PromptDialog {
   switch (event.kind) {
+    case 'target':
+      return { ...state, machine: { ...state.machine, pendingTargets: event.targets } }
+    case 'size':
+      return { ...state, machine: { ...state.machine, pendingSize: event.size } }
+    case 'disconnect':
+      if (state.machine.lifecycle === 'idle') return state
+      return freshIdle({ nextItemId: state.machine.nextItemId })
     case 'begin':
       return beginPrompt(state, event.title, opts)
     case 'unknown':
@@ -235,8 +243,14 @@ export function reducePrompt (
       return appendContent(state, { type: 'text', text: event.text } as Omit<PromptDialogItemText, 'id'>)
     case 'markup':
       return appendContent(state, { type: 'markup', ast: event.ast } as Omit<PromptDialogItemMarkup, 'id'>)
-    case 'image':
-      return appendContent(state, { type: 'image', path: event.path, alt: event.alt, scale: event.scale } as Omit<PromptDialogItemImage, 'id'>)
+    case 'image': {
+      if (isValidImagePath(event.path)) {
+        return appendContent(state, { type: 'image', path: event.path, alt: event.alt, scale: event.scale } as Omit<PromptDialogItemImage, 'id'>)
+      }
+      // Fallback: invalid path → text item using alt, or drop if alt is empty.
+      if (event.alt.length === 0) return state
+      return appendContent(state, { type: 'text', text: event.alt } as Omit<PromptDialogItemText, 'id'>)
+    }
     case 'button':
       return appendContent(state, { type: 'button', label: event.label, gcode: event.gcode, style: event.style } as Omit<PromptDialogItemButton, 'id'>)
     case 'footer_button':

@@ -305,3 +305,225 @@ describe('reducer — button groups', () => {
     expect(state.items).toHaveLength(2)
   })
 })
+
+describe('reducer — targeting', () => {
+  it('stash target before begin', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'target', targets: ['fluidd'] },
+      { kind: 'begin', title: 'T' }
+    )
+    expect(state.machine.lifecycle).toBe('building')
+    expect(state.machine.activeTargets).toEqual(['fluidd'])
+    expect(state.machine.pendingTargets).toBeNull()
+  })
+
+  it('last target wins', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'target', targets: ['klipperscreen'] },
+      { kind: 'target', targets: ['fluidd'] },
+      { kind: 'begin', title: 'T' }
+    )
+    expect(state.machine.activeTargets).toEqual(['fluidd'])
+  })
+
+  it('begin matches "all" target', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'target', targets: ['all'] },
+      { kind: 'begin', title: 'T' }
+    )
+    expect(state.machine.lifecycle).toBe('building')
+  })
+
+  it('begin matches frontend category', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'target', targets: ['web'] },
+      { kind: 'begin', title: 'T' }
+    )
+    expect(state.machine.lifecycle).toBe('building')
+  })
+
+  it('begin enters suppressed when no target matches', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'target', targets: ['klipperscreen'] },
+      { kind: 'begin', title: 'T' }
+    )
+    expect(state.machine.lifecycle).toBe('suppressed')
+    expect(state.open).toBe(false)
+  })
+
+  it('suppressed ignores content commands and show', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'target', targets: ['klipperscreen'] },
+      { kind: 'begin', title: 'T' },
+      { kind: 'text', text: 'never' },
+      { kind: 'show' }
+    )
+    expect(state.items).toEqual([])
+    expect(state.open).toBe(false)
+    expect(state.machine.lifecycle).toBe('suppressed')
+  })
+
+  it('suppressed -> end clears to idle', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'target', targets: ['klipperscreen'] },
+      { kind: 'begin', title: 'T' },
+      { kind: 'end' }
+    )
+    expect(state.machine.lifecycle).toBe('idle')
+  })
+
+  it('suppressed -> begin re-evaluates with prior pending', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'target', targets: ['klipperscreen'] },
+      { kind: 'begin', title: 'T1' },
+      { kind: 'target', targets: ['fluidd'] },
+      { kind: 'begin', title: 'T2' }
+    )
+    expect(state.machine.lifecycle).toBe('building')
+    expect(state.title).toBe('T2')
+  })
+
+  it('target during active prompt applies only to next', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'begin', title: 'T1' },
+      { kind: 'target', targets: ['klipperscreen'] }, // applies to T2, not T1
+      { kind: 'text', text: 'still visible' }
+    )
+    expect(state.machine.lifecycle).toBe('building')
+    expect(state.items).toHaveLength(1)
+    expect(state.machine.pendingTargets).toEqual(['klipperscreen'])
+  })
+})
+
+describe('reducer — sizing', () => {
+  it('default size is normal after begin without pendingSize', () => {
+    const state = feed(initialPromptState(), { kind: 'begin', title: 'T' })
+    expect(state.size).toBe('normal')
+  })
+
+  it('pendingSize consumed at begin', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'size', size: 'large' },
+      { kind: 'begin', title: 'T' }
+    )
+    expect(state.size).toBe('large')
+    expect(state.machine.pendingSize).toBeNull()
+  })
+
+  it('last size wins', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'size', size: 'small' },
+      { kind: 'size', size: 'x-large' },
+      { kind: 'begin', title: 'T' }
+    )
+    expect(state.size).toBe('x-large')
+  })
+
+  it('size during active prompt applies only to next', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'begin', title: 'T1' },
+      { kind: 'size', size: 'large' }
+    )
+    expect(state.size).toBe('normal')
+    expect(state.machine.pendingSize).toBe('large')
+  })
+})
+
+describe('reducer — disconnect', () => {
+  it('clears building state', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'begin', title: 'T' },
+      { kind: 'text', text: 'x' },
+      { kind: 'disconnect' }
+    )
+    expect(state.machine.lifecycle).toBe('idle')
+    expect(state.items).toEqual([])
+    expect(state.open).toBe(false)
+  })
+
+  it('clears shown state and closes dialog', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'begin', title: 'T' },
+      { kind: 'show' },
+      { kind: 'disconnect' }
+    )
+    expect(state.open).toBe(false)
+    expect(state.machine.lifecycle).toBe('idle')
+  })
+
+  it('idle disconnect is a no-op', () => {
+    const state = reducePrompt(initialPromptState(), { kind: 'disconnect' }, OPTS)
+    expect(state).toEqual(initialPromptState())
+  })
+
+  it('clears suppressed state', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'target', targets: ['klipperscreen'] },
+      { kind: 'begin', title: 'T' },
+      { kind: 'disconnect' }
+    )
+    expect(state.machine.lifecycle).toBe('idle')
+  })
+})
+
+describe('reducer — image fallback', () => {
+  it('invalid path becomes text item using alt', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'begin', title: 'T' },
+      { kind: 'image', path: 'config/../etc/passwd', alt: 'fallback', scale: null }
+    )
+    expect(state.items).toEqual([{ id: 0, type: 'text', text: 'fallback' }])
+  })
+
+  it('invalid path with empty alt is dropped', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'begin', title: 'T' },
+      { kind: 'image', path: 'http://evil.example/x.png', alt: '', scale: null }
+    )
+    expect(state.items).toEqual([])
+  })
+
+  it('valid path passes through', () => {
+    const state = feed(initialPromptState(),
+      { kind: 'begin', title: 'T' },
+      { kind: 'image', path: 'config/spool.svg', alt: 'spool', scale: 0.5 }
+    )
+    expect(state.items).toEqual([
+      { id: 0, type: 'image', path: 'config/spool.svg', alt: 'spool', scale: 0.5 }
+    ])
+  })
+})
+
+describe('reducer — replay edge cases', () => {
+  function feedAll (events: ProtocolEvent[]): PromptDialog {
+    return feed(initialPromptState(), ...events)
+  }
+
+  it('begin without end then show -> shown', () => {
+    const state = feedAll([
+      { kind: 'begin', title: 'T' },
+      { kind: 'text', text: 'x' },
+      { kind: 'show' }
+    ])
+    expect(state.open).toBe(true)
+  })
+
+  it('begin/begin replacement preserves nothing of first', () => {
+    const state = feedAll([
+      { kind: 'begin', title: 'T1' },
+      { kind: 'text', text: 'first' },
+      { kind: 'begin', title: 'T2' }
+    ])
+    expect(state.title).toBe('T2')
+    expect(state.items).toEqual([])
+  })
+
+  it('end after suppressed restores idle', () => {
+    const state = feedAll([
+      { kind: 'target', targets: ['klipperscreen'] },
+      { kind: 'begin', title: 'T' },
+      { kind: 'end' }
+    ])
+    expect(state.machine.lifecycle).toBe('idle')
+  })
+})
