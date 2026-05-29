@@ -61,6 +61,8 @@ export interface PromptDialogItemText {
 export interface PromptDialogItemMarkup {
   id: number
   type: 'markup'
+  /** The raw markup string, preserved for renderers that need the original. */
+  raw: string
   ast: MarkupNode[]
 }
 

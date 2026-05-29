@@ -34,7 +34,8 @@ export function initialPromptState (): PromptDialog {
     machine: {
       lifecycle: 'idle',
       activeContainer: null,
-      activeTargets: [],
+      // Idle state is "visible to all" — matches spec expectation after prompt_end.
+      activeTargets: ['all'],
       pendingTargets: null,
       pendingSize: null,
       nextItemId: 0
@@ -242,7 +243,7 @@ export function reducePrompt (
     case 'text':
       return appendContent(state, { type: 'text', text: event.text } as Omit<PromptDialogItemText, 'id'>)
     case 'markup':
-      return appendContent(state, { type: 'markup', ast: event.ast } as Omit<PromptDialogItemMarkup, 'id'>)
+      return appendContent(state, { type: 'markup', raw: event.raw, ast: event.ast } as Omit<PromptDialogItemMarkup, 'id'>)
     case 'image': {
       if (isValidImagePath(event.path)) {
         return appendContent(state, { type: 'image', path: event.path, alt: event.alt, scale: event.scale } as Omit<PromptDialogItemImage, 'id'>)

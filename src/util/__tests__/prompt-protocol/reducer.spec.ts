@@ -20,7 +20,7 @@ describe('initialPromptState', () => {
       machine: {
         lifecycle: 'idle',
         activeContainer: null,
-        activeTargets: [],
+        activeTargets: ['all'],
         pendingTargets: null,
         pendingSize: null,
         nextItemId: 0

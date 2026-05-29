@@ -6,7 +6,7 @@ import type { MarkupNode, PromptStyle, PromptSize } from './types'
 export type ProtocolEvent =
   | { kind: 'begin'; title: string }
   | { kind: 'text'; text: string }
-  | { kind: 'markup'; ast: MarkupNode[] }
+  | { kind: 'markup'; raw: string; ast: MarkupNode[] }
   | { kind: 'image'; path: string; alt: string; scale: number | null }
   | { kind: 'button'; label: string; gcode: string; style: PromptStyle }
   | { kind: 'footer_button'; label: string; gcode: string; style: PromptStyle }
@@ -93,7 +93,7 @@ export function parseAction (rawLine: string): ProtocolEvent | null {
       return { kind: 'image', path, alt, scale }
     }
     case 'markup':
-      return { kind: 'markup', ast: parseMarkup(param) }
+      return { kind: 'markup', raw: param, ast: parseMarkup(param) }
     default:
       return { kind: 'unknown', command: name }
   }
