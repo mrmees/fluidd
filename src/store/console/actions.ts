@@ -13,11 +13,7 @@ export const actions = {
   /**
    * Reset our store
    */
-  async reset ({ commit, state }) {
-    if (state.promptDialog.machine.lifecycle !== 'idle') {
-      const cleared = reducePrompt(state.promptDialog, { kind: 'disconnect' }, REDUCER_OPTS)
-      commit('setPromptDialog', cleared)
-    }
+  async reset ({ commit }) {
     commit('setReset')
   },
 

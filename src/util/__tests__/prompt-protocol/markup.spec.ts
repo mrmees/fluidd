@@ -186,4 +186,17 @@ describe('parseMarkup — tags', () => {
       { type: 'text', text: '<B>x</B>' }
     ])
   })
+
+  it('handles nested unclosed tags in readable order', () => {
+    // <b><i>text → b wraps i wraps text. With no closes, recover by emitting
+    // <b><i> as literal text followed by the inner text.
+    const result = parseMarkup('<b><i>text')
+    const plain = toPlainText(result)
+    // The "<b>" should appear before "<i>" in the output (outer first).
+    const bIdx = plain.indexOf('<b>')
+    const iIdx = plain.indexOf('<i>')
+    expect(bIdx).toBeGreaterThanOrEqual(0)
+    expect(iIdx).toBeGreaterThan(bIdx)
+    expect(plain).toContain('text')
+  })
 })

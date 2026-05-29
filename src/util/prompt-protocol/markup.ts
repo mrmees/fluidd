@@ -205,14 +205,15 @@ function buildAst (input: string): MarkupNode[] {
     i += 1
   }
 
-  // Unclosed open tags → re-emit their literal `<tag>` and flatten children.
+  // Unclosed open tags → re-emit their literal `<tag>` and flatten children,
+  // innermost first so outer tags appear before inner tags in the output.
   while (stack.length > 0) {
     flushText()
-    const open = stack.shift()!
+    const open = stack.pop()!
     const literal = open.value !== null
       ? `<${open.tag}:${open.value}>`
       : `<${open.tag}>`
-    const target = stack.length > 0 ? stack[0].children : root
+    const target = stack.length > 0 ? stack[stack.length - 1].children : root
     pushText(target, literal)
     for (const child of open.children) {
       if (child.type === 'text') {

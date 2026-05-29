@@ -14,6 +14,7 @@
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
 import type { PromptDialogItemImage } from '@/store/console/types'
+import type { RootState } from '@/store/types'
 
 const DEFAULT_IMAGE_BASE_PX = 200
 
@@ -25,7 +26,7 @@ export default class PromptItemImage extends Vue {
   loadFailed = false
 
   get imageUrl (): string {
-    const apiUrl = (this.$store.state as any).config.apiUrl as string
+    const apiUrl = (this.$store.state as RootState).config.apiUrl
     // Path is already validated by the reducer; encode segments to preserve / structure.
     const encoded = this.item.path.split('/').map(encodeURIComponent).join('/')
     return `${apiUrl}/server/files/${encoded}`
