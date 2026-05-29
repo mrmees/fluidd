@@ -10,6 +10,7 @@ import { jwtDecode } from 'jwt-decode'
 import type { TokenKeys } from '../config/types'
 
 const MODULES_TO_RESET_ON_DROP = [
+  'console',
   'server',
   'power',
   'webcams',
@@ -178,6 +179,17 @@ export const actions = {
         await dispatch('runIdentify')
 
         break
+
+      case 'ready': {
+        const wasReady = state.hasBeenReady
+        commit('setHasBeenReady', true)
+        if (wasReady) {
+          // Reconnect (not initial load): close any prompt the gcode_store
+          // replay may have re-opened, per spec §9.6.
+          await dispatch('console/clearPromptOnReconnect', undefined, { root: true })
+        }
+        break
+      }
     }
   },
 

@@ -105,6 +105,16 @@ export const actions = {
   },
 
   /**
+   * Called after reconnect to discard any prompt that gcode_store replay
+   * re-opened. Spec §9.6: prompts must close on disconnect.
+   */
+  async clearPromptOnReconnect ({ state, commit }) {
+    if (state.promptDialog.machine.lifecycle === 'idle') return
+    const next = reducePrompt(state.promptDialog, { kind: 'disconnect' }, REDUCER_OPTS)
+    commit('setPromptDialog', next)
+  },
+
+  /**
    * Klipper provides us with a list of available gcode commands
    * based on the current configuration.
    */

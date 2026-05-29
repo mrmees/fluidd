@@ -17,5 +17,9 @@ export const mutations = {
 
   setConnectionId (state, payload: number | null) {
     state.connectionId = payload
+  },
+
+  setHasBeenReady (state, payload: boolean) {
+    state.hasBeenReady = payload
   }
 } satisfies MutationTree<SocketState>
