@@ -1,16 +1,23 @@
 import type { ActionTree } from 'vuex'
 import { Globals } from '@/globals'
-import type { ConsoleEntry, ConsoleFilter, ConsoleState, PromptDialogButton, PromptDialogItemButton, PromptDialogItemText } from './types'
+import type { ConsoleEntry, ConsoleFilter, ConsoleState } from './types'
 import type { RootState } from '../types'
 import { SocketActions } from '@/api/socketActions'
 import DOMPurify from 'dompurify'
-import { takeRightWhile } from 'lodash-es'
+import { parseAction, reducePrompt, initialPromptState } from '@/util/prompt-protocol'
+import type { ProtocolEvent } from '@/util/prompt-protocol'
+
+const REDUCER_OPTS = { frontendId: 'fluidd', frontendCategories: ['web'] }
 
 export const actions = {
   /**
    * Reset our store
    */
-  async reset ({ commit }) {
+  async reset ({ commit, state }) {
+    if (state.promptDialog.machine.lifecycle !== 'idle') {
+      const cleared = reducePrompt(state.promptDialog, { kind: 'disconnect' }, REDUCER_OPTS)
+      commit('setPromptDialog', cleared)
+    }
     commit('setReset')
   },
 
@@ -43,121 +50,58 @@ export const actions = {
    * Add a console entry
    */
   async onAddConsoleEntry ({ commit, dispatch }, payload: Omit<ConsoleEntry, 'id'>) {
-    payload.message = DOMPurify.sanitize(payload.message).replace(/\r\n|\r|\n/g, '<br />')
+    const rawMessage = payload.message
+    const sanitized = DOMPurify.sanitize(rawMessage).replace(/\r\n|\r|\n/g, '<br />')
     if (!payload.time || payload.time <= 0) {
       payload.time = Date.now() / 1000 | 0
     }
     if (!payload.type) {
       payload.type = 'response'
     }
-    if (payload.type === 'response' && payload.message.startsWith('// action:')) {
+    if (payload.type === 'response' && rawMessage.startsWith('// action:')) {
       payload.type = 'action'
     }
 
-    commit('setConsoleEntry', payload)
+    commit('setConsoleEntry', { ...payload, message: sanitized })
 
-    dispatch('onUpdatePromptDialog', payload)
+    // Hand RAW (unsanitized) line to the prompt parser; sanitization corrupts markup entities.
+    dispatch('onUpdatePromptDialog', { rawMessage })
   },
 
   /**
    * On a fresh load of the UI, we load prior gcode / console history
    */
-  async onGcodeStore ({ commit, dispatch }, payload: Moonraker.DataStore.GcodeStoreResponse) {
+  async onGcodeStore ({ commit }, payload: Moonraker.DataStore.GcodeStoreResponse) {
     if (payload && payload.gcode_store) {
-      const entries = payload.gcode_store
-        .map((entry, index): ConsoleEntry => {
-          const rawMessage = Globals.CONSOLE_RECEIVE_PREFIX + entry.message
-          const message = DOMPurify.sanitize(rawMessage)
-            .replace(/\r\n|\r|\n/g, '<br />')
-
-          const type = (
-            entry.type === 'response' &&
-            entry.message.startsWith('// action:')
-          )
-            ? 'action'
-            : entry.type
-
-          return {
-            ...entry,
-            id: index,
-            message,
-            type
-          }
-        })
+      const entries = payload.gcode_store.map((entry, index): ConsoleEntry => {
+        const rawMessage = Globals.CONSOLE_RECEIVE_PREFIX + entry.message
+        const message = DOMPurify.sanitize(rawMessage).replace(/\r\n|\r|\n/g, '<br />')
+        const type = (
+          entry.type === 'response' &&
+          entry.message.startsWith('// action:')
+        ) ? 'action' : entry.type
+        return { ...entry, id: index, message, type }
+      })
 
       commit('setAllEntries', entries)
 
-      const dialogEntries = entries
-        .filter(entry => (
-          entry.type === 'action' &&
-          entry.message.startsWith('// action:prompt_')
-        ))
-
-      const dialogEntriesAfterEnd = takeRightWhile(dialogEntries, entry => entry.message !== '// action:prompt_end')
-      const dialogEntriesAfterBegin = takeRightWhile(dialogEntriesAfterEnd, entry => entry.message !== '// action:prompt_begin')
-
-      dialogEntriesAfterBegin
-        .forEach(entry => dispatch('onUpdatePromptDialog', entry))
+      // Replay all action:prompt_* events through the reducer in one pass.
+      let promptState = initialPromptState()
+      for (let i = 0; i < payload.gcode_store.length; i++) {
+        const raw = Globals.CONSOLE_RECEIVE_PREFIX + payload.gcode_store[i].message
+        if (!raw.includes('action:prompt_')) continue
+        const event: ProtocolEvent | null = parseAction(raw)
+        if (event) promptState = reducePrompt(promptState, event, REDUCER_OPTS)
+      }
+      commit('setPromptDialog', promptState)
     }
   },
 
-  async onUpdatePromptDialog ({ commit }, payload: ConsoleEntry) {
-    const parsedMessage = (
-      payload.type === 'action' &&
-      /^\/\/ action:prompt_([^ ]+)(?: (.+))?/.exec(payload.message)
-    )
-
-    if (parsedMessage) {
-      const [, type, param] = parsedMessage
-
-      switch (type) {
-        case 'begin':
-          commit('setResetPromptDialog', param)
-          break
-
-        case 'text': {
-          const item: PromptDialogItemText = {
-            type: 'text',
-            text: param
-          }
-
-          commit('setPromptDialogItem', item)
-          break
-        }
-
-        case 'button': {
-          const [text, command, color] = param.split('|')
-
-          const item: PromptDialogItemButton = {
-            type: 'button',
-            text,
-            command,
-            color
-          }
-
-          commit('setPromptDialogItem', item)
-          break
-        }
-
-        case 'footer_button': {
-          const [text, command, color] = param.split('|')
-
-          const item: PromptDialogButton = {
-            text,
-            command,
-            color
-          }
-
-          commit('setPromptDialogFooterButton', item)
-
-          break
-        }
-
-        case 'show':
-        case 'end':
-          commit('setPromptDialogOpen', type === 'show')
-      }
-    }
+  async onUpdatePromptDialog ({ state, commit }, payload: { rawMessage: string }) {
+    const event = parseAction(payload.rawMessage)
+    if (!event) return
+    const next = reducePrompt(state.promptDialog, event, REDUCER_OPTS)
+    commit('setPromptDialog', next)
   },
 
   /**

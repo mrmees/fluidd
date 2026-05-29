@@ -1,22 +1,5 @@
-import type { ConsoleState, PromptDialog } from './types'
-
-function initialPromptDialog (): PromptDialog {
-  return {
-    open: false,
-    title: '',
-    size: 'normal',
-    items: [],
-    footerButtons: [],
-    machine: {
-      lifecycle: 'idle',
-      activeContainer: null,
-      activeTargets: [],
-      pendingTargets: null,
-      pendingSize: null,
-      nextItemId: 0
-    }
-  }
-}
+import { initialPromptState } from '@/util/prompt-protocol'
+import type { ConsoleState } from './types'
 
 export const defaultState = (): ConsoleState => {
   return {
@@ -28,7 +11,7 @@ export const defaultState = (): ConsoleState => {
     commandHistory: [],
     autoScroll: true,
     lastCleared: 0,
-    promptDialog: initialPromptDialog(),
+    promptDialog: initialPromptState(),
     consoleFilters: [],
     consoleFiltersRegexp: []
   }
