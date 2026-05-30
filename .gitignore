@@ -33,3 +33,12 @@ pnpm-debug.log*
 *.sw?
 
 *.tsbuildinfo
+
+# Local-only assistant scratchpads — never commit
+.claude/
+
+# Working planning docs and one-off screenshots — opt-in tracking only.
+# Existing tracked files in these paths remain tracked; this just blocks
+# accidental `git add -A` sweeps of new scratch content going forward.
+docs/plans/
+docs/screenshots/
