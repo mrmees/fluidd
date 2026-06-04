@@ -13,9 +13,17 @@
 
 <script lang="ts">
 import { Component, Prop, Vue } from 'vue-property-decorator'
-import type { PromptDialogItemImage } from '@/store/console/types'
+import type { PromptDialogItemImage, PromptSize } from '@/store/console/types'
 
-const DEFAULT_IMAGE_BASE_PX = 200
+// Image base width tracks dialog envelope size, so scale=1 has roughly the
+// same visual prominence across small/normal/large dialogs. Each value is
+// ~1/3 of its matching dialog max-width.
+const IMAGE_BASE_BY_DIALOG_SIZE_PX: Record<Exclude<PromptSize, 'full-screen'>, number> = {
+  small: 133,
+  normal: 200,
+  large: 267,
+  'x-large': 333
+}
 
 @Component({})
 export default class PromptItemImage extends Vue {
@@ -35,11 +43,21 @@ export default class PromptItemImage extends Vue {
   }
 
   get imageStyle (): Record<string, string> {
-    if (this.item.scale === null) {
-      return { 'max-width': '100%', height: 'auto' }
+    // Absent scale → 1.0. Closes the "viewBox-only SVG with no explicit width
+    // fills the container" trap where browsers expand SVG-as-img to 100% width.
+    const scale = this.item.scale ?? 1
+    const size = (this.$store.state as any).console.promptDialog.size as PromptSize
+    if (size === 'full-screen') {
+      // Viewport-relative so the image tracks the dialog as the window resizes.
+      return {
+        width: `${33 * scale}vw`,
+        'max-width': '100%',
+        height: 'auto'
+      }
     }
+    const base = IMAGE_BASE_BY_DIALOG_SIZE_PX[size] ?? IMAGE_BASE_BY_DIALOG_SIZE_PX.normal
     return {
-      width: `${DEFAULT_IMAGE_BASE_PX * this.item.scale}px`,
+      width: `${base * scale}px`,
       'max-width': '100%',
       height: 'auto'
     }

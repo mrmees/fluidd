@@ -85,9 +85,13 @@ describe('PromptItemImage — error fallback', () => {
       scale: null
     }
 
-    // PromptItemImage reads $typedState.config.apiUrl via getter; inject via store.
+    // PromptItemImage reads $typedState.config.apiUrl AND
+    // $typedState.console.promptDialog.size; inject both via store.
     const store = new Vuex.Store({
-      state: { config: { apiUrl: 'http://example.local' } }
+      state: {
+        config: { apiUrl: 'http://example.local' },
+        console: { promptDialog: { size: 'normal' } }
+      }
     })
 
     // Make $typedState delegate to $store.state (mirrors the real plugin).
